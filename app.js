@@ -1,3 +1,5 @@
+
+
 class Course {
     constructor(size, difficulty) {
         this.size = size;
@@ -71,6 +73,7 @@ class Cell {
     }
 
     propagate(chance) {
+        // Recursive. Currently finds neighbors that have already been transformed which is potentially wasteful
         if(chance <= 0) {
             return;
         } else {
@@ -105,26 +108,44 @@ const generateCourse = (size, difficulty) => {
     return course;
 }
 
-const generateCell = (terr, posX, posY) => {}
+const generateCourseHTML = (course) => {
+    const gameContainer = document.getElementById('game-container');
+    const courseContainer = document.createElement('div');
+    courseContainer.classList.add('course');
+    gameContainer.appendChild(courseContainer)
 
-const propagate = (cell) => {
+    for(let cell of course.map) {
+        let htmlCell = document.createElement('div');
+        htmlCell.id = String(cell.posX) + '-' + String(cell.posY);
+        htmlCell.classList.add(cell.terr)
+        htmlCell.classList.add('cell')
+        courseContainer.appendChild(htmlCell);
+    }
+
 }
 
-for(let i = 0; i < 10; i++) {
-    let course = generateCourse(10,1);
-    let cell = course.getCell(Math.floor(Math.random() * 10), Math.floor(Math.random() * 10));
-    cell.propagate(0.70);
+const generateCell = (terr, posX, posY) => {}
+
+// testing
+const testingSize = 20;
+for(let i = 0; i < 12; i++) {
+    let course = generateCourse(20,1);
+    let cell = course.getCell(Math.floor(Math.random() * 20), Math.floor(Math.random() * 20));
+    let cell2 = course.getCell(Math.floor(Math.random() * 20), Math.floor(Math.random() * 20));
+    cell.propagate(0.80);
+    cell2.propagate(0.60);
 
     let output = [];
     let counter = 0;
-    for(let i = 0; i < 10; i++) {
+    for(let i = 0; i < 20; i++) {
         let line = '';
-        for(let j = 0; j < 10; j++) {
+        for(let j = 0; j < 20; j++) {
             course.map[counter].terr == 'grass' ? line += '🟩' : line += '🟨';
             counter += 1;
         }
         output.unshift(line)
         line = '';
+        
     }
         console.log('Course #' + (Number(i) + 1) + ':')
         for(let i of output){
@@ -132,48 +153,51 @@ for(let i = 0; i < 10; i++) {
             
         }
         console.log('--------------------')
-
+    
+    generateCourseHTML(course);
 }
 
 
-// setInterval();
+setInterval();
+// velocity x, velocity y - sin of angle, cosign of angle?
+// Course builder
 
-// const getNeighbors = (course, cell) => {
-//     let neighbors = [];
-//     let posX = cell.coord.x;
-//     let posY = cell.coord.y;
-//     // right
-//     neighbors.push(course.getCell(posX+1, posY));
-//     // bottom-right
-//     neighbors.push(course.getCell(posX+1, posY-1));
-//     // bottom
-//     neighbors.push(course.getCell(posX, posY-1));
-//     // bottom-left
-//     neighbors.push(course.getCell(posX-1, posY-1));
-//     // left
-//     neighbors.push(course.getCell(posX-1, posY));
-//     // top-left
-//     neighbors.push(course.getCell(posX-1, posY+1));
-//     // top
-//     neighbors.push(course.getCell(posX, posY+1));  
-// }
-
-
-// class Hazard {
-//     constructor(terr, seedX, seedY) {
-//         this.terr = terr;
-//         this.seedX = seedX;
-//         this.seedY = seedY;
-//         this.seedCoord = {x: seedX, y: seedY};
-//     }
-
-//     propagate(level) {
-//         let neighbors = getNeighbors()
-//     }
+const getNeighbors = (course, cell) => {
+    let neighbors = [];
+    let posX = cell.coord.x;
+    let posY = cell.coord.y;
+    // right
+    neighbors.push(course.getCell(posX+1, posY));
+    // bottom-right
+    neighbors.push(course.getCell(posX+1, posY-1));
+    // bottom
+    neighbors.push(course.getCell(posX, posY-1));
+    // bottom-left
+    neighbors.push(course.getCell(posX-1, posY-1));
+    // left
+    neighbors.push(course.getCell(posX-1, posY));
+    // top-left
+    neighbors.push(course.getCell(posX-1, posY+1));
+    // top
+    neighbors.push(course.getCell(posX, posY+1));  
+}
 
 
-// }
+class Hazard {
+    constructor(terr, seedX, seedY) {
+        this.terr = terr;
+        this.seedX = seedX;
+        this.seedY = seedY;
+        this.seedCoord = {x: seedX, y: seedY};
+    }
 
-// class Ball {
+    propagate(level) {
+        let neighbors = getNeighbors()
+    }
 
-// }
+
+}
+
+class Ball {
+
+}
