@@ -1,11 +1,10 @@
-
-
 class Course {
     constructor(size, difficulty) {
         this.size = size;
         this.difficulty = difficulty;
         this.map = [];
         this.coords = [];
+        this.ball = {};
     }
 
     getCell(posX, posY) {
@@ -51,6 +50,7 @@ class Cell {
         this.terr = terr;
         this.posX = posX;
         this.posY = posY;
+        this.hasBall = false;
         this.coord = {x: posX, y: posY};        
     }
 
@@ -83,7 +83,7 @@ class Cell {
                 let rand = Math.random();
                 if(rand < chance) {
                     neighbor.changeTerrain('sand');
-                    neighbor.propagate(chance-0.3);
+                    neighbor.propagate(chance-0.30);
                     // console.log(neighbor);
                 }
 
@@ -93,6 +93,61 @@ class Cell {
     }
 }
 
+class Ball {
+    // can make own div w/ absolute positioning?
+    constructor(course, posX, posY) {   
+        this.course = course;
+        this.cell = this.course.getCell(posX, posY);
+        this.cell.hasBall = true;
+        this.posX = posX;
+        this.posY = posY;
+        this.velX = 0;
+        this.velY = 0;
+        this.coord = {x: posX, y: posY}
+
+        // this.angleFromBall = 0;
+    }
+    
+    findNewPos(power, angle, oldX, oldY) {
+        let angleRadians = degreesToRadians(angle);
+        let newX = Math.floor(power * Math.cos(angleRadians)) + oldX;
+        let newY = Math.floor(power * Math.sin(angleRadians)) + oldY;
+        return [newX, newY];
+    }
+
+    updatePos(newX, newY) {
+        this.posX = newX;
+        this.posY = newY;
+        this.cell = this.course.getCell(this.posX, this.posY);
+        this.cell.hasBall = true;
+        this.coord = {x: newX, y: newY};
+        
+        updateCourseHTML(this.course);
+    }
+
+    hit(power, angle) { 
+        let currCell = document.getElementById('x' + this.cell.posX + 'y' + this.cell.posY);
+        currCell.classList.remove('ball');
+        this.cell.hasBall = false;
+        let newCoord = this.findNewPos(power, angle, this.posX, this.posY);
+        let newX = newCoord[0];
+        let newY = newCoord[1];
+        let newCell = document.getElementById('x' + newX + 'y' + newY);
+        newCell.classList.add('ball');
+        return this.updatePos(newX, newY);
+    }
+}
+
+class Hole {
+    // make sure neighbors.len = 8;
+    constructor(course, posX, posY) {
+        this.course = course;
+        this.cell = this.course.getCell(posX, posY)
+        this.posX = posX;
+        this.posY = posY;
+        this.area = this.cell.getCellNeighbors();
+    }
+}
 
 const generateCourse = (size, difficulty) => {
     let course = new Course( size, difficulty );
@@ -105,6 +160,18 @@ const generateCourse = (size, difficulty) => {
             course.coords.push([newCell.posX, newCell.posY]);
         }
     }
+    // hazards
+    let cell = course.getCell(Math.floor(Math.random() * size), Math.floor(Math.random() * size));
+    let cell2 = course.getCell(Math.floor(Math.random() * size), Math.floor(Math.random() * size));
+    let cell3 = course.getCell(Math.floor(Math.random() * size), Math.floor(Math.random() * size));
+    cell.propagate(1);
+    cell2.propagate(0.65);
+    cell3.propagate(0.85);
+
+    // ball
+    let ball = new Ball(course, size-(size-3), size-(size-3));
+    course.ball = ball;
+
     return course;
 }
 
@@ -116,88 +183,168 @@ const generateCourseHTML = (course) => {
 
     for(let cell of course.map) {
         let htmlCell = document.createElement('div');
-        htmlCell.id = String(cell.posX) + '-' + String(cell.posY);
+        htmlCell.id = 'x' + String(cell.posX) + 'y' + String(cell.posY);
         htmlCell.classList.add(cell.terr)
         htmlCell.classList.add('cell')
+
+        htmlCell.addEventListener("mouseover", (e) => {
+            // find angle between mouseover cell and ball cell
+            let ballCell = course.ball.cell; 
+            let angle = Math.floor(angleBtwnCells(ballCell, cell));
+            console.log(angle);
+            
+        })
+
+
+        if(cell.hasBall){
+            htmlCell.classList.add('ball');
+        }
         courseContainer.appendChild(htmlCell);
     }
 
 }
 
-const generateCell = (terr, posX, posY) => {}
-
-// testing
-const testingSize = 20;
-for(let i = 0; i < 12; i++) {
-    let course = generateCourse(20,1);
-    let cell = course.getCell(Math.floor(Math.random() * 20), Math.floor(Math.random() * 20));
-    let cell2 = course.getCell(Math.floor(Math.random() * 20), Math.floor(Math.random() * 20));
-    cell.propagate(0.80);
-    cell2.propagate(0.60);
-
-    let output = [];
-    let counter = 0;
-    for(let i = 0; i < 20; i++) {
-        let line = '';
-        for(let j = 0; j < 20; j++) {
-            course.map[counter].terr == 'grass' ? line += '🟩' : line += '🟨';
-            counter += 1;
-        }
-        output.unshift(line)
-        line = '';
-        
-    }
-        console.log('Course #' + (Number(i) + 1) + ':')
-        for(let i of output){
-            console.log(i)
-            
-        }
-        console.log('--------------------')
-    
-    generateCourseHTML(course);
+const updateCourseHTML = (course) => {
+    let gameContainer = document.getElementById('game-container');
+    gameContainer.innerHTML = '';
+    return generateCourseHTML(course);
 }
 
 
-setInterval();
+const extractPosFromId = (id) => {
+    // Takes the ID format 'x#y#' where # can be any number of integers and returns an {x, y} coord object.
+    let pos = {};
+    let splitId = id.split('');
+    let indexX = splitId.indexOf('x');
+    let indexY = splitId.indexOf('y');
+    let xCoord = id.substring(indexX+1, indexY);
+    let yCoord = id.substring(indexY+1, id.length);
+    pos.x = xCoord;
+    pos.y = yCoord 
+    pos.push(yCoord);
+    return pos;
+}
+
+const resetBall = (ball) => {
+    // In out of bounds situaitons
+}
+
+const generateUI = (course) => {
+}
+
+const generatePath = (p1, p2) => {
+    let path = [];
+    let slope = (p2.posY - p1.posY) / (p2.posX - p1.posX);
+    console.log(`Slope is ${slope}`);
+    let dx = p2.posX - p1.posX;
+    let dy = p2.posY - p1.posY;
+
+    if(dx > 0 && dy > 0) {
+        for(let i = p1.posX; i < Math.max(p2.posX, dy); i++) {
+            let posX = i;
+            let posY = (slope*posX);
+            // checks for decimal Y values, adds both ceiling and floor if decimal
+            if(posY % 1 != 0){
+                path.push([posX, Math.max(Math.floor(posY), p1.posY)])
+                path.push([posX, Math.ceil(posY)])
+            } else {
+                path.push([posX, posY]);
+            }
+        }
+    }
+
+    if(dx < 0 && dy > 0){
+    }
+    return path;
+}
+
+let makeCourseBtn = document.getElementById('make-course-btn');
+makeCourseBtn.addEventListener("click", () => {
+    generateCourseHTML(generateCourse(50,2));
+})
+
+// testing
+// course size = testingSize x testingSize;
+// const testingSize = 50;
+// for(let i = 0; i < 1; i++) {
+//     // course generation
+//     let course = generateCourse(testingSize,1);
+//     let cell = course.getCell(Math.floor(Math.random() * testingSize), Math.floor(Math.random() * testingSize));
+//     let cell2 = course.getCell(Math.floor(Math.random() * testingSize), Math.floor(Math.random() * testingSize));
+//     cell.propagate(0.90);
+//     cell2.propagate(0.90);
+
+//     // console output
+//     let output = [];
+//     let counter = 0;
+//     for(let i = 0; i < testingSize; i++) {
+//         let line = '';
+//         for(let j = 0; j < testingSize; j++) {
+//             course.map[counter].terr == 'grass' ? line += '🟩' : line += '🟨';
+//             counter += 1;
+//         }
+//         output.unshift(line)
+//         line = '';
+        
+//     }
+//         console.log('Course #' + (Number(i) + 1) + ':')
+//         for(let i of output){
+//             console.log(i)
+            
+//         }
+//         console.log('--------------------')
+    
+//     generateCourseHTML(course);
+// }
+
+
+// setInterval();
 // velocity x, velocity y - sin of angle, cosign of angle?
 // Course builder
 
-const getNeighbors = (course, cell) => {
-    let neighbors = [];
-    let posX = cell.coord.x;
-    let posY = cell.coord.y;
-    // right
-    neighbors.push(course.getCell(posX+1, posY));
-    // bottom-right
-    neighbors.push(course.getCell(posX+1, posY-1));
-    // bottom
-    neighbors.push(course.getCell(posX, posY-1));
-    // bottom-left
-    neighbors.push(course.getCell(posX-1, posY-1));
-    // left
-    neighbors.push(course.getCell(posX-1, posY));
-    // top-left
-    neighbors.push(course.getCell(posX-1, posY+1));
-    // top
-    neighbors.push(course.getCell(posX, posY+1));  
+// const getNeighbors = (course, cell) => {
+//     let neighbors = [];
+//     let posX = cell.coord.x;
+//     let posY = cell.coord.y;
+//     // right
+//     neighbors.push(course.getCell(posX+1, posY));
+//     // bottom-right
+//     neighbors.push(course.getCell(posX+1, posY-1));
+//     // bottom
+//     neighbors.push(course.getCell(posX, posY-1));
+//     // bottom-left
+//     neighbors.push(course.getCell(posX-1, posY-1));
+//     // left
+//     neighbors.push(course.getCell(posX-1, posY));
+//     // top-left
+//     neighbors.push(course.getCell(posX-1, posY+1));
+//     // top
+//     neighbors.push(course.getCell(posX, posY+1));  
+// }
+
+
+// class Hazard {
+//     constructor(terr, seedX, seedY) {
+//         this.terr = terr;
+//         this.seedX = seedX;
+//         this.seedY = seedY;
+//         this.seedCoord = {x: seedX, y: seedY};
+//     }
+
+//     propagate(level) {
+//         let neighbors = getNeighbors()
+//     }
+
+
+// }
+
+// Utility functions
+const degreesToRadians = (angle) => {
+    var pi = Math.PI;
+    return angle * (pi / 180);
 }
 
-
-class Hazard {
-    constructor(terr, seedX, seedY) {
-        this.terr = terr;
-        this.seedX = seedX;
-        this.seedY = seedY;
-        this.seedCoord = {x: seedX, y: seedY};
-    }
-
-    propagate(level) {
-        let neighbors = getNeighbors()
-    }
-
-
+const angleBtwnCells = (p1, p2) => {
+    return Math.atan2(p2.posY - p1.posY, p2.posX - p1.posX) * 180 / Math.PI;
 }
 
-class Ball {
-
-}
