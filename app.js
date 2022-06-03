@@ -51,6 +51,7 @@ class Cell {
         this.posX = posX;
         this.posY = posY;
         this.hasBall = false;
+        this.path = false;
         this.coord = {x: posX, y: posY};        
     }
 
@@ -230,32 +231,6 @@ const resetBall = (ball) => {
 }
 
 const generateUI = (course) => {
-}
-
-const generatePath = (p1, p2) => {
-    let path = [];
-    let slope = (p2.posY - p1.posY) / (p2.posX - p1.posX);
-    console.log(`Slope is ${slope}`);
-    let dx = p2.posX - p1.posX;
-    let dy = p2.posY - p1.posY;
-
-    if(dx > 0 && dy > 0) {
-        for(let i = p1.posX; i < Math.max(p2.posX, dy); i++) {
-            let posX = i;
-            let posY = (slope*posX);
-            // checks for decimal Y values, adds both ceiling and floor if decimal
-            if(posY % 1 != 0){
-                path.push([posX, Math.max(Math.floor(posY), p1.posY)])
-                path.push([posX, Math.ceil(posY)])
-            } else {
-                path.push([posX, posY]);
-            }
-        }
-    }
-
-    if(dx < 0 && dy > 0){
-    }
-    return path;
 }
 
 let makeCourseBtn = document.getElementById('make-course-btn');
