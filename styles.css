@@ -34,8 +34,8 @@ background-image: url("data:image/svg+xml,%3Csvg width='16' height='20' viewBox=
 .course {
     background-color: gray;
     display: grid;
-    grid-template-columns: repeat(50, 1fr);
-    grid-template-rows: repeat(50, 1fr);
+    grid-template-columns: repeat(30, 1fr);
+    grid-template-rows: repeat(30, 1fr);
     grid-gap: 0;
     width: 700px;
     height: 700px;
@@ -95,4 +95,8 @@ background-image: url("data:image/svg+xml,%3Csvg width='16' height='20' viewBox=
     content: '';
     border-radius: 50%;
     border: 1px solid black;
+}
+
+.path {
+    background-color: red;
 }

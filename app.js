@@ -105,37 +105,64 @@ class Ball {
         this.velX = 0;
         this.velY = 0;
         this.coord = {x: posX, y: posY}
+        this.path = [];
 
         // this.angleFromBall = 0;
     }
     
-    findNewPos(power, angle, oldX, oldY) {
+    findNewPos(power, angle, oldCell) {
         let angleRadians = degreesToRadians(angle);
-        let newX = Math.floor(power * Math.cos(angleRadians)) + oldX;
-        let newY = Math.floor(power * Math.sin(angleRadians)) + oldY;
-        return [newX, newY];
+        let newX = Math.floor(power * Math.cos(angleRadians)) + oldCell.posX;
+        let newY = Math.floor(power * Math.sin(angleRadians)) + oldCell.posY;
+        return this.course.getCell(newX, newY);
     }
 
-    updatePos(newX, newY) {
-        this.posX = newX;
-        this.posY = newY;
+    updatePos(newCell) {
+        this.posX = newCell.posX;
+        this.posY = newCell.posY;
         this.cell = this.course.getCell(this.posX, this.posY);
         this.cell.hasBall = true;
-        this.coord = {x: newX, y: newY};
+        this.coord = {x: newCell.posX, y: newCell.posY};
         
         updateCourseHTML(this.course);
     }
 
     hit(power, angle) { 
-        let currCell = document.getElementById('x' + this.cell.posX + 'y' + this.cell.posY);
-        currCell.classList.remove('ball');
+        // Only works if HTML has been rendered.
+        let currCell = this.cell;
+        let currCellHTML = document.getElementById('x' + this.cell.posX + 'y' + this.cell.posY);
+        currCellHTML.classList.remove('ball');
         this.cell.hasBall = false;
-        let newCoord = this.findNewPos(power, angle, this.posX, this.posY);
-        let newX = newCoord[0];
-        let newY = newCoord[1];
-        let newCell = document.getElementById('x' + newX + 'y' + newY);
-        newCell.classList.add('ball');
-        return this.updatePos(newX, newY);
+        let newCell = this.findNewPos(power, angle, currCell);
+        console.log(newCell);
+        this.path = interpolatePath(this.course, generatePath(this.course, currCell, newCell));
+        generatePathHTML(this.path);
+        this.move();
+        // let newX = newCell.posX;
+        // let newY = newCell.posY;
+        // let newCellHTML = document.getElementById('x' + newX + 'y' + newY);
+        // newCellHTML.classList.add('ball');
+        // return this.updatePos(newCell);
+    }
+
+    move() {
+        // Doesn't currently accept path of 1;
+        for(let i = 1; i < this.path.length; i++){
+            let counter = i;
+            let cellHTML = document.getElementById('x' + this.path[i].posX + 'y' + this.path[i].posY);
+            let prevCellHTML = document.getElementById('x' + this.path[i-1].posX + 'y' + this.path[i-1].posY);
+            
+            this.path[i].hasBall = true;
+            this.path[i-1].hasBall = false;
+            cellHTML.classList.add('ball');
+
+            prevCellHTML.classList.add('path');
+            prevCellHTML.classList.remove('ball');
+            
+            this.updatePos(this.path[i]);
+        }
+        
+        return this.path = [];
     }
 }
 
@@ -211,6 +238,173 @@ const updateCourseHTML = (course) => {
     return generateCourseHTML(course);
 }
 
+const generatePath = (course, cell1, cell2) => {
+    // Returns list of coordinate points, _not_ cells.
+    let path = [];
+    let slope = (cell2.posY - cell1.posY) / (cell2.posX - cell1.posX);
+    console.log(`Slope is ${slope}`)
+    let y = slope*cell1.posX;
+    let b = cell1.posY - slope * cell1.posX;
+    console.log(`The equation of the line is y = ${slope}x + ${b}`)
+    let dx = cell2.posX - cell1.posX;
+    let dy = cell2.posY - cell1.posY;
+
+    if(slope == Infinity){
+        for(let i = 1; i < dy; i++) {
+            path.push([cell1.posX, cell1.posY + i ])
+        }
+    } else {
+        if(dx > 0 && dy > 0) {
+            for(let i = 0; i < dx+1; i++) {
+                let stepX = i + cell1.posX;
+                if(slope % 1 == 0) {
+                    let stepY = slope*stepX + b;
+                    path.push(course.getCell(stepX, stepY));
+                } else {
+                    let stepY = Math.floor(slope*stepX + b);
+                    path.push(course.getCell(stepX, stepY));
+                }
+            }
+        }
+
+        if(dx < 0 && dy > 0) {
+            console.log('dx < 0, dy > 0')
+            for(let i = cell1.posX; i > cell2.posX-1; i--) {
+                let stepX = i;
+                if(slope % 1 == 0) {
+                    let stepY = slope*stepX + b;
+                    path.push(course.getCell(stepX, stepY));
+                } else {
+                    let stepY = Math.ceil(slope*stepX + b);
+                    path.push(course.getCell(stepX, stepY));
+                }
+            }
+        }
+
+        if(dx > 0 && dy < 0){
+            for(let i = 0; i < dx; i++) {
+                let stepX = i + cell1.posX;
+                if(slope % 1 ==0){
+                    let stepY = slope*stepX + b;
+                    path.push(course.getCell(stepX, stepY));
+                } else {
+                    let stepY = Math.floor(slope*stepX + b);
+                    path.push(course.getCell(stepX, stepY));
+                }
+
+            }
+        }
+         if(dx < 0 && dy < 0) {
+            for(let i = cell1.posX; i > cell2.posX-1; i--) {
+                let stepX = i;
+                if(slope % 1 == 0) {
+                    let stepY = slope*stepX + b;
+                    path.push(course.getCell(stepX, stepY));
+                } else {
+                    let stepY = Math.ceil(slope*stepX + b);
+                    path.push(course.getCell(stepX, stepY));
+                }
+            }
+        }
+    }
+    for(let cell of path){
+        course.getCell(cell.posX, cell.posY).path = true;
+    }
+    return path;
+}
+
+const interpolatePath = (course, path) => {
+    if(path.length <= 1) {
+        return path;
+    }
+    // Takes an array of cells.
+    let newPath = [];
+    // for dx > 0 and dy > 0
+    let startX = path[0].posX;
+    let startY = path[0].posY;
+    let endX = path[path.length-1].posX
+    let endY = path[path.length-1].posY
+
+    let dx = endX - startX;
+    let dy = endY - startY;
+   
+    if((endY - startY) / (endX - startX) == 1 || (endY - startY) / (endX - startX) == -1) {
+        console.log('Path is straight. There is nothing to interpolate.')
+        return path;
+    } 
+    // tested: works;
+    if(dx > 0 && dy > 0) {
+        for(let i = 1; i < path.length; i++) {
+            newPath.push(path[i-1]);
+            let startX = path[i-1].posX;
+            let startY = path[i-1].posY;
+            let endX = path[i].posX;
+            let endY = path[i].posY;
+            let dy = endY - startY;
+
+            for(let j=1; j < dy+1; j++) {
+                newPath.push(course.getCell(startX+1, startY+j))
+            }
+        }
+    }
+    // tested: works
+    if(dx < 0 && dy > 0) {
+        for(let i = 1; i < path.length; i++) {
+            newPath.push(path[i-1]);
+            
+            let startX = path[i-1].posX;
+            let startY = path[i-1].posY;
+            let endX = path[i].posX;
+            let endY = path[i].posY;
+            let dy = endY - startY;
+
+            for(let j=1; j < dy+1; j++) {
+                newPath.push(course.getCell(startX-1, startY+j));
+            }
+        }
+    }
+    // tested: works
+    if(dx > 0 && dy < 0) {
+            console.log('dx > 0 and dy < 0 running')
+            for(let i = 1; i < path.length; i++) {
+                newPath.push(path[i-1]);
+                let startX = path[i-1].posX;
+                let startY = path[i-1].posY;
+                let endX = path[i].posX;
+                let endY = path[i].posY;
+                let dy = endY - startY;
+
+                for(let j=1; j > dy+1; j--) {
+                    newPath.push(course.getCell(startX+1, startY-j));
+                }
+            }
+        }
+     if(dx < 0 && dy < 0) {
+            for(let i = 1; i < path.length; i++) {
+                newPath.push(path[i-1]);
+                let startX = path[i-1].posX;
+                let startY = path[i-1].posY;
+                let endX = path[i].posX;
+                let endY = path[i].posY;
+                let dy = endY - startY;
+
+                for(let j=1; j > dy+1; j--) {
+                    console.log('j running')
+                    newPath.push(course.getCell(startX-1, startY-j));
+                }
+            }
+        }
+    // currently returns with repeats
+    return newPath;
+}
+
+const generatePathHTML = (path) => {
+    for(let cell of path){
+        let cellHTML = document.getElementById('x' + cell.posX + 'y' + cell.posY);
+        console.log(cellHTML);
+        cellHTML.classList.add('path');
+    }
+}
 
 const extractPosFromId = (id) => {
     // Takes the ID format 'x#y#' where # can be any number of integers and returns an {x, y} coord object.
@@ -237,6 +431,7 @@ let makeCourseBtn = document.getElementById('make-course-btn');
 makeCourseBtn.addEventListener("click", () => {
     generateCourseHTML(generateCourse(50,2));
 })
+
 
 // testing
 // course size = testingSize x testingSize;
@@ -323,3 +518,6 @@ const angleBtwnCells = (p1, p2) => {
     return Math.atan2(p2.posY - p1.posY, p2.posX - p1.posX) * 180 / Math.PI;
 }
 
+let course = generateCourse(30,2);
+generateCourseHTML(course);
+let ball = course.ball;
