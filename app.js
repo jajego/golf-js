@@ -229,7 +229,7 @@ const generateCourseHTML = (course) => {
         }
         courseContainer.appendChild(htmlCell);
     }
-
+    return courseContainer;
 }
 
 const updateCourseHTML = (course) => {
@@ -429,7 +429,9 @@ const generateUI = (course) => {
 
 let makeCourseBtn = document.getElementById('make-course-btn');
 makeCourseBtn.addEventListener("click", () => {
-    generateCourseHTML(generateCourse(50,2));
+    const course = generateCourseHTML(generateCourse(30,2));
+    course.style.gridTemplateColumns = 'repeat(30, 1fr)';
+    course.style.gridTemplaterows = 'repeat(30, 1fr)';
 })
 
 
