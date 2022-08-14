@@ -206,6 +206,14 @@ const generateCourse = (size, difficulty) => {
 const generateCourseHTML = (course) => {
     const gameContainer = document.getElementById('game-container');
     const courseContainer = document.createElement('div');
+    const hitButton = document.createElement('button');
+    hitButton.textContent = 'Hit ball'
+    hitButton.id = 'hit-btn'
+    hitButton.style.width = '100px';
+    hitButton.style.height = '50px';
+    hitButton.addEventListener('click', () => {
+        course.ball.hit(3, Math.floor(Math.random() * 50));
+    })
     courseContainer.classList.add('course');
     gameContainer.appendChild(courseContainer)
 
@@ -229,6 +237,7 @@ const generateCourseHTML = (course) => {
         }
         courseContainer.appendChild(htmlCell);
     }
+    gameContainer.appendChild(hitButton);
     return courseContainer;
 }
 
@@ -248,7 +257,15 @@ const generatePath = (course, cell1, cell2) => {
     console.log(`The equation of the line is y = ${slope}x + ${b}`)
     let dx = cell2.posX - cell1.posX;
     let dy = cell2.posY - cell1.posY;
-
+    if(slope == 0) {
+        for(let i = 1; i < dx; i++) {
+            path.push([cell1.posX + i, cell1.posY])
+        }
+        for(let cell of path){
+            course.getCell(cell.posX, cell.posY).path = true;
+        }
+        return path;
+    }
     if(slope == Infinity){
         for(let i = 1; i < dy; i++) {
             path.push([cell1.posX, cell1.posY + i ])
@@ -520,6 +537,6 @@ const angleBtwnCells = (p1, p2) => {
     return Math.atan2(p2.posY - p1.posY, p2.posX - p1.posX) * 180 / Math.PI;
 }
 
-let course = generateCourse(30,2);
-generateCourseHTML(course);
-let ball = course.ball;
+// let course = generateCourse(30,2);
+// generateCourseHTML(course);
+// let ball = course.ball;
