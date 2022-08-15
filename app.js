@@ -237,7 +237,7 @@ const generateCourseHTML = (course) => {
         }
         courseContainer.appendChild(htmlCell);
     }
-    gameContainer.appendChild(hitButton);
+    // gameContainer.appendChild(hitButton);
     return courseContainer;
 }
 
